@@ -1,0 +1,57 @@
+name: Automatically approve personal notebook Pull Requests
+
+on:
+  pull_request:
+    branches: [ master, snowflake ]
+    types: [opened]
+    paths:
+      - 'notebooks/**'
+
+jobs:
+  changes-personal-notebooks:
+    runs-on: ubuntu-latest
+    outputs:
+      notebooks: ${{ steps.notebook-changes.outputs.notebooks }}
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: notebook-changes
+        with:
+          list-files: 'csv'
+          filters: |
+            notebooks:
+              - 'notebooks/personal/**/*.ipynb'
+
+  changes-other-paths:
+    runs-on: ubuntu-latest
+    outputs:
+      other-paths: ${{ steps.other-changes.outputs.other-paths }}
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: other-changes
+        with:
+          list-files: 'csv'
+          filters: |
+            other-paths:
+              - '!(notebooks/personal/**/*.ipynb)'
+
+  approve-personal-notebooks:
+    needs: [changes-personal-notebooks, changes-other-paths]
+    if: ${{ needs.changes-personal-notebooks.outputs.notebooks == 'true' && needs.changes-other-paths.outputs.other-paths == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: hmarr/auto-approve-action@v2
+      with:
+        github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  leave-courtesy-comment:
+    needs: [changes-personal-notebooks, changes-other-paths]
+    if: ${{ needs.changes-personal-notebooks.outputs.notebooks == 'true' && needs.changes-other-paths.outputs.other-paths == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          message: |
+            **Your PR has been automatically approved because it only modifies a notebook in the `notebooks/personal` path. Please request a proper review if you are making substantial changes.**
+          allow-repeats: false
