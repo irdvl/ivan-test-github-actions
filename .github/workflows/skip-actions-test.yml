@@ -1,0 +1,36 @@
+# This workflow will lint all python code with Black and run pytest
+
+name: Python
+
+on:
+  push:
+    # run on master to populate the python cache
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  check_paths:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v3.4.0
+        # Changes to SQL files do not trigger tests
+        with:
+          paths: '["foo/**", "bar/tests/**", "**_test.py", "baz/qux/features/**"]'
+          paths_ignore:  '["apple/**", "banana/**/*.sql", "cherry/dags/**/*.sql"]'
+
+  leave-courtesy-comment:
+    needs: check_paths
+    if: ${{ needs.check_paths.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          message: |
+            Fired off :rocket:
+          allow-repeats: false
