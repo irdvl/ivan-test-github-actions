@@ -55,3 +55,16 @@ jobs:
           message: |
             **Your PR has been automatically approved because it only modifies a notebook in the `notebooks/personal` path. Please request a proper review if you are making substantial changes.**
           allow-repeats: false
+
+  leave-courtesy-comment-other-files-modified:
+    needs: [changes-personal-notebooks, changes-other-paths]
+    if: ${{ needs.changes-personal-notebooks.outputs.notebooks == 'true' && needs.changes-other-paths.outputs.other-paths == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          message: |
+            Friendly reminder that pull requests that _only_ modify notebooks in the `notebooks/personal` path are automatically approved. You are modifying a notebook in `notebooks/personal` path *in addition* to other files. If that is intended, please ignore this message.
+          allow-repeats: false
